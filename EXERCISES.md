@@ -146,24 +146,27 @@ that routes the reply (safety → Tier 3, unresolved >72h → Tier 2, etc.).
 **Done when:** you see a score near **100%** on the curated set and can explain that the score
 is the fraction of replies containing all five markers.
 
-### 2. Generate synthetic data and inspect it
-**Goal:** See how a byte-consistent dataset is manufactured ("the data is 80% of the job").
+### 2. Build the training set and inspect its *shape*
+**Goal:** See how the dataset is built so the format is **learned, not instructed** ("the data
+is 80% of the job").
 **Steps:**
-1. Run `python finetune/build_dataset.py` — it writes
-   `kestrel_support_dataset.synthetic.jsonl` (a *separate* file) and prints a sample row.
-2. Open the file and confirm every assistant reply follows the identical five-part shape.
-3. Score it: `python finetune/check_format.py finetune/kestrel_support_dataset.synthetic.jsonl`.
-**Done when:** the synthetic file scores ~100% and you can point to the greeting-rotation +
-template trick that makes the shape byte-for-byte consistent.
+1. Run `python finetune/build_dataset.py` — it rebuilds `kestrel_support_dataset.jsonl` from the
+   curated core + augmentation and prints a sample row and the system-prompt breakdown.
+2. Open the file and confirm two things: every *assistant* reply follows the identical five-part
+   shape, **and** the format is never mentioned in any system/user turn (some rows have no system
+   prompt at all).
+3. Score it: `python finetune/check_format.py finetune/kestrel_support_dataset.jsonl`.
+**Done when:** the set scores ~100%, and you can explain *why* keeping the format out of the
+prompt (and varying/omitting the system prompt) is what forces the model to learn it.
 
 ### 3. Add 10 examples and re-check
 **Goal:** Practice extending a dataset without breaking the format.
 **Steps:**
-1. Add 10 new `(question, answer, policy, next_step)` seeds to the `SEEDS` list in
-   `build_dataset.py` (drawn from real Kestrel facts — 26-month warranty, 45-day / 12% policy,
-   SLAs).
+1. Add a new seed dict to the `SEEDS` list in `build_dataset.py` — a `"q"` list of ~4 phrasings
+   plus `answer` / `policy` / `next_step` drawn from real Kestrel facts (26-month warranty,
+   45-day / 12% policy, SLAs). Keep the format **out** of the question phrasings.
 2. Regenerate, then run `check_format.py` on the output.
-3. Deliberately break one example (drop its `Policy:` line) and re-run to watch the score drop.
+3. Deliberately break one reply (drop its `Policy:` line) and re-run to watch the score drop.
 **Done when:** your additions keep the score at ~100%, and the broken example makes the score
 fall — so you trust the check.
 

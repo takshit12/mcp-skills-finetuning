@@ -18,10 +18,11 @@ learns:
 
 | File | What it is |
 | --- | --- |
-| `kestrel_support_dataset.jsonl` | 118 chat-format training examples, every assistant reply in the fixed Kestrel five-part format. |
+| `kestrel_support_dataset.jsonl` | ~190 chat-format training examples, every assistant reply in the fixed Kestrel five-part format. The format appears **only** in the replies (never in the prompt) and the system prompt varies (incl. empty) — see "Dataset design" below. Built by `build_dataset.py`. |
+| `kestrel_support_dataset.curated.jsonl` | The 118 hand-written Q→reply pairs that seed the training set — the source of the natural voice. `build_dataset.py` re-prompts these and adds augmentation. |
 | `kestrel_finetune_unsloth.ipynb` | The annotated Colab notebook: install → load base → LoRA → data → train → before/after → the "voice not facts" beat → export → a DPO section. |
 | `kestrel_preference_dataset.jsonl` | 24 DPO preference pairs (`chosen` vs `rejected`) for the preference-tuning step beyond SFT. |
-| `build_dataset.py` | Shows how to *generate* format-consistent data synthetically (stdlib only). |
+| `build_dataset.py` | Builds `kestrel_support_dataset.jsonl` from the curated core + canonical-fact augmentation, with format-free varied prompts (stdlib only, deterministic). |
 | `check_format.py` | Evaluation: scores how many replies follow the five-part format (the curated set is 100%). |
 | `unsloth-everywhere.md` | The finale: how Unsloth spans MCP + Skills + Fine-tune (Studio, the Unsloth MCP server, serving your model to Claude Code). |
 | `README.md` | This file. |
@@ -72,7 +73,9 @@ Then in the UI:
 
 - **Before** fine-tuning, the base model answers Kestrel questions in a generic, free-form,
   formatless way — no greeting, no `Answer:` / `Policy:` / `Next step:` markers, no sign-off.
-- **After** 118 examples, the model reliably emits the exact Kestrel five-part format.
+- **After** ~190 examples, the model reliably emits the exact Kestrel five-part format —
+  even though the format is **never mentioned in the prompt**, which is what makes it a
+  *learned* behavior rather than instruction-following (see "Dataset design" below).
 
 Also watch the **training loss** during the run: a healthy fine-tune settles around
 **0.5–1.0**. If it dives toward **0**, the model is overfitting/memorizing.
@@ -86,6 +89,40 @@ was never in the training data. It replies in flawless Kestrel voice — and get
 > **Fine-tuning taught the VOICE, not the FACTS. For facts, use RAG (last session).**
 >
 > **Production = fine-tune for voice + RAG for facts.**
+
+## Dataset design: learned format, not instructed
+
+The single most important thing about this dataset is **what is *not* in it**. Two rules:
+
+1. **The five-part format appears only in the assistant replies — never in the system
+   or user turns.** An earlier version of this demo put the format spec in the system
+   prompt of every example. That's a trap: the model can then satisfy the training loss by
+   just *following the instruction*, and the behavior collapses the moment you drop that
+   instruction at inference (exactly what you'd see if you strip the format spec in Unsloth
+   Studio or a bare API call). With the format kept out of the prompt, the *only* way to
+   lower the loss is to **internalize** the format. That's a learned voice.
+2. **The system prompt varies, including ~25% of examples with no system prompt at all.**
+   We rotate a few neutral identity prompts ("You are Kestrel Home Support…") and leave many
+   examples bare. This teaches the format as intrinsic to *being* Kestrel Home Support,
+   robust to however the model is addressed — the **"train the way you'll infer"** principle.
+   If at inference you'll use a bare prompt (or none), you must *train* on bare prompts.
+
+Regenerate the set anytime (deterministic, stdlib only):
+
+```bash
+python build_dataset.py            # writes kestrel_support_dataset.jsonl (~190 examples)
+python check_format.py             # should report 100% five-part adherence
+```
+
+`build_dataset.py` reads the hand-curated core (`kestrel_support_dataset.curated.jsonl`),
+re-prompts it with the format-free pool, and adds fact-checked augmentation drawn from
+`skills/kestrel-support/reference.md`, so every reply stays factually consistent with the
+rest of the repo. Add seeds or prompts to the pool and re-run to grow it further.
+
+> **Testing whether the tune "took":** query the fine-tuned model with the *bare* identity
+> prompt (or an empty system prompt). If it still produces the five-part format, the tune
+> worked. If it only formats when you paste the full format spec back into the prompt, it
+> was leaning on the instruction — retrain with format-free prompts like these.
 
 ## Swapping the base model (one-line change)
 

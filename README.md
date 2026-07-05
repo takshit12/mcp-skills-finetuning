@@ -43,8 +43,8 @@ as high as the problem needs — a higher rung costs more effort and is easy to 
 | `mcp/langgraph_mcp_client.py` | Loads the MCP server's tools into a **LangGraph** ReAct agent via `langchain-mcp-adapters` — ties MCP back to the LangChain stack. |
 | `skills/kestrel-support/` | A **Skills demo** — a `SKILL.md` support playbook + on-demand `reference.md`, for any skills-aware client. |
 | `skills/kestrel-triage/` | A second, **executable** skill — a `SKILL.md` that has Claude *run* `scripts/classify.py` to triage a ticket into a tier (fire/smoke → Tier 3, >72h → Tier 2, else Tier 1). |
-| `finetune/` | The **fine-tuning demo** — an Unsloth/QLoRA Colab notebook + a 118-example Kestrel dataset. See [`finetune/README.md`](./finetune/README.md). |
-| `finetune/build_dataset.py` | Generates a **synthetic** dataset (`kestrel_support_dataset.synthetic.jsonl`) — shows how to manufacture format-consistent training data at scale. |
+| `finetune/` | The **fine-tuning demo** — an Unsloth/QLoRA Colab notebook + a ~190-example Kestrel dataset. See [`finetune/README.md`](./finetune/README.md). |
+| `finetune/build_dataset.py` | **Builds** the training set (`kestrel_support_dataset.jsonl`) from the curated core + canonical-fact augmentation — with the format kept out of the prompt and system prompts varied (incl. empty), so the format is *learned*, not instructed. |
 | `finetune/check_format.py` | **Evaluation** — scores format adherence (the five-part house format) over a dataset or real model outputs; the curated set scores ~100%. |
 | `finetune/kestrel_preference_dataset.jsonl` | 24 **DPO** chosen/rejected pairs for the notebook's preference-tuning section. |
 | `docs/` | Shared source material: `kestrel_home_faq.md` (the support FAQ the MCP servers and RAG both read) and a swap doc. |
@@ -220,7 +220,7 @@ python scripts/classify.py "<the full ticket text>"     # what the skill runs fo
 
 Open [`finetune/kestrel_finetune_unsloth.ipynb`](./finetune/kestrel_finetune_unsloth.ipynb)
 in **Google Colab** (set **Runtime → Change runtime type → T4 GPU**), upload
-`finetune/kestrel_support_dataset.jsonl` (**118 examples**), then **Runtime → Run all** —
+`finetune/kestrel_support_dataset.jsonl` (**~190 examples**), then **Runtime → Run all** —
 about **~10 minutes** on a free T4. Prefer no-code? Use **Unsloth Studio** (`unsloth studio`),
 upload the dataset, click **Train**, and compare in **Model Arena**. Details in
 [`finetune/README.md`](./finetune/README.md).
@@ -239,25 +239,30 @@ Swap the base model with a one-line change in `FastLanguageModel.from_pretrained
 
 > **What you'll see:** *before*, the base model answers a Kestrel question generically —
 > formatless, no greeting, no `Answer:` / `Policy:` / `Next step:` markers, no sign-off.
-> *After* 118 examples, it reliably emits the exact Kestrel five-part format. The punchline:
-> ask it about a **made-up product** whose price was never in the data — it replies in
-> flawless Kestrel voice and gets the **price wrong**.
+> *After* ~190 examples, it reliably emits the exact Kestrel five-part format — and it does
+> so even though **the format is never mentioned in the prompt**, which is what makes it a
+> *learned* behavior, not instruction-following. The punchline: ask it about a **made-up
+> product** whose price was never in the data — it replies in flawless Kestrel voice and
+> gets the **price wrong**.
 
 > **Fine-tuning teaches the VOICE / FORMAT, not the FACTS.** For facts, use **RAG** (last
 > session). **Production = fine-tune for voice + RAG for facts.**
 
-**Where the data comes from — "the data is 80% of the job."** The curated
-`kestrel_support_dataset.jsonl` is hand-written, but `build_dataset.py` shows how to
-*manufacture* a format-consistent set at scale (rotate greetings, stamp every reply through
-one five-part template):
+**Where the data comes from — "the data is 80% of the job."** `build_dataset.py` builds the
+training set by taking the hand-written curated core (`kestrel_support_dataset.curated.jsonl`),
+re-prompting it with a **format-free, varied** system-prompt pool (incl. empty prompts), and
+adding fact-checked augmentation — stamping every reply through one five-part template:
 
 ```bash
-python finetune/build_dataset.py            # writes kestrel_support_dataset.synthetic.jsonl
+python finetune/build_dataset.py            # writes kestrel_support_dataset.jsonl (~190 examples)
+python finetune/check_format.py             # 100% five-part adherence
 ```
 
-> **What you'll see:** a separate `.synthetic.jsonl` of byte-for-byte consistent replies, plus
-> a printed sample row. The notebook still trains on the curated set — hand-written variety
-> teaches a more natural voice — so treat this as the *method*, not a replacement.
+> **The key design point:** the five-part format appears **only in the assistant replies**,
+> never in the system/user turns, and the system prompt varies (with ~25% of examples having
+> none at all). That's what forces the model to *learn* the format instead of parroting an
+> instruction — and it's why the tuned model still formats correctly from a bare prompt.
+> Principle: **train the way you'll infer.**
 
 **Did it work? Measure it.** Fine-tuning taught a *format*, so evaluate whether replies
 actually follow it. `check_format.py` scores the five markers (greeting → `Answer:` →

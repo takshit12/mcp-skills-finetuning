@@ -129,8 +129,9 @@ but you pay for those tokens every call and the behavior isn't permanent — the
 from fine-tuning.
 
 **SFT (Supervised Fine-Tuning)** — The most common kind: train on (input → desired output)
-pairs so the model imitates the target replies. The Kestrel demo is SFT on 118 chat examples
-whose assistant turns all follow the five-part format.
+pairs so the model imitates the target replies. The Kestrel demo is SFT on ~190 chat examples
+whose assistant turns all follow the five-part format (the format is kept out of the prompts, so
+the model *learns* it rather than following an instruction).
 
 **Full fine-tuning** — Updating *all* of a model's weights. Most accurate in principle but
 memory-hungry and expensive — usually overkill. LoRA is the practical alternative.
