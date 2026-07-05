@@ -7,11 +7,13 @@
 mcp[cli]>=1.2
 
 # The MCP-in-LangGraph example (mcp/langgraph_mcp_client.py): loads an MCP
-# server's tools into a LangChain/LangGraph agent.
+# server's tools into a LangChain/LangGraph agent. python-dotenv lets it read a
+# key from a local .env file (so you never hard-code a secret).
 langchain-mcp-adapters>=0.1
 langchain>=1.0,<2.0
 langchain-openai>=1.0,<2.0
 langgraph>=1.0
+python-dotenv>=1.0
 
 # The fine-tuning data/eval helper scripts (finetune/build_dataset.py,
 # finetune/check_format.py) use only the Python standard library -- no install

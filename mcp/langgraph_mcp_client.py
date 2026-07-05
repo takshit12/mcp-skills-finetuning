@@ -17,17 +17,30 @@ It needs the MCP server reachable — here that just means kestrel_mcp_server.py
 exists next to this file (the adapter spawns it as a subprocess automatically).
 
 Model access is optional and graceful:
-  * Set OPENROUTER_API_KEY to actually ask a question end-to-end (uses OpenRouter's
-    OpenAI-compatible endpoint via ChatOpenAI).
+  * Provide OPENROUTER_API_KEY to ask a question end-to-end (uses OpenRouter's
+    OpenAI-compatible endpoint via ChatOpenAI). Supply it SAFELY -- put it in a
+    local `.env` file (gitignored) as `OPENROUTER_API_KEY=sk-or-...`, or
+    `export OPENROUTER_API_KEY=...` in your shell. Never hard-code it here.
   * With no key, it still loads the MCP tools and prints their names, so the
     MCP-to-LangGraph wiring is demonstrated fully offline.
 
-Requirements: pip install langchain-mcp-adapters langchain langgraph langchain-openai
+Requirements: pip install langchain-mcp-adapters langchain langgraph langchain-openai python-dotenv
 """
 
 import asyncio
 import os
+import sys
 from pathlib import Path
+
+# Pick up OPENROUTER_API_KEY from a local .env file if one exists (it's gitignored).
+# This is the safe way to supply a key -- put it in .env, or `export` it in your
+# shell -- so you NEVER hard-code a secret into this file. Degrades gracefully if
+# python-dotenv isn't installed.
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
 
 from langchain_mcp_adapters.client import MultiServerMCPClient
 from langgraph.prebuilt import create_react_agent
@@ -38,7 +51,10 @@ SERVER_PATH = Path(__file__).resolve().parent / "kestrel_mcp_server.py"
 MCP_SERVERS = {
     "kestrel": {
         "transport": "stdio",
-        "command": "python",
+        # Use the SAME interpreter running this client (sys.executable) so the
+        # server subprocess gets the venv's Python + deps -- robust whether or not
+        # the venv is "activated" on PATH.
+        "command": sys.executable,
         "args": [str(SERVER_PATH)],
     }
     # To target the REMOTE server instead, swap the block above for:
