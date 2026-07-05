@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "kestrel": {
+      "command": "/ABSOLUTE/PATH/mcp-skills-finetuning/.venv/bin/python",
+      "args": ["/ABSOLUTE/PATH/mcp-skills-finetuning/mcp/kestrel_mcp_server.py"]
+    }
+  }
+}

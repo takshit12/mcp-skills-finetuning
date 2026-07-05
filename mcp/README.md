@@ -136,3 +136,70 @@ in this folder (Claude Code picks it up automatically), or add the same
 `"kestrel"` block to your **Claude Desktop** config alongside filesystem/github.
 Then ask: *"What's the warranty on SKU KH-AR-GLD?"* or *"A customer wants to
 return a thermostat 60 days after delivery — what's the fee?"*
+
+---
+
+## Use the Kestrel server in ANY MCP client (Cursor, VS Code, Codex, …)
+
+MCP is a *standard*, so the exact same server works in every MCP-aware editor —
+you just register it in each client's own config format. Use **absolute paths**,
+and point at the repo's venv Python so the deps resolve. Below, substitute:
+
+- `PYTHON` = `/ABSOLUTE/PATH/mcp-skills-finetuning/.venv/bin/python`
+- `SERVER` = `/ABSOLUTE/PATH/mcp-skills-finetuning/mcp/kestrel_mcp_server.py`
+
+### Claude Code (CLI) — what you already did
+```bash
+claude mcp add kestrel -- PYTHON SERVER
+claude mcp list          # kestrel → ✔ connected
+claude mcp remove kestrel
+```
+Or drop the project-scoped [`.mcp.json`](./.mcp.json) at the repo root and Claude
+Code loads it automatically.
+
+### The generic block (Claude Desktop, Cursor, Windsurf, most clients)
+Almost every client accepts this `mcpServers` shape — it's the same JSON as
+Claude Desktop, just in a different file per client:
+```json
+{
+  "mcpServers": {
+    "kestrel": {
+      "command": "PYTHON",
+      "args": ["SERVER"]
+    }
+  }
+}
+```
+Where each client reads it:
+| Client | Config file |
+|--------|-------------|
+| **Claude Desktop** | `~/Library/Application Support/Claude/claude_desktop_config.json` (mac) · `%APPDATA%\Claude\claude_desktop_config.json` (win) — see [`claude_desktop_config.example.json`](./claude_desktop_config.example.json) |
+| **Cursor** | `~/.cursor/mcp.json` (global) or `<project>/.cursor/mcp.json` — see [`cursor_mcp.example.json`](./cursor_mcp.example.json) |
+| **Windsurf** | `~/.codeium/windsurf/mcp_config.json` |
+
+### VS Code (GitHub Copilot / agent mode) — slightly different schema
+VS Code uses a `servers` key (not `mcpServers`) and a `type` field, in
+`<project>/.vscode/mcp.json` — see [`vscode_mcp.example.json`](./vscode_mcp.example.json):
+```json
+{
+  "servers": {
+    "kestrel": { "type": "stdio", "command": "PYTHON", "args": ["SERVER"] }
+  }
+}
+```
+
+### Codex CLI (OpenAI) — TOML, not JSON
+Codex configures MCP in `~/.codex/config.toml` — see
+[`codex_config.example.toml`](./codex_config.example.toml):
+```toml
+[mcp_servers.kestrel]
+command = "PYTHON"
+args = ["SERVER"]
+```
+
+**Test in any of them the same way:** ask *"using the kestrel tools, what's the
+warranty on SKU KH-AR-GLD and the restocking fee 60 days after delivery?"* — the
+client should call `lookup_warranty` + `check_restocking_fee` and answer 26 months
+/ 12%. (The **remote** [`kestrel_http_server.py`](./kestrel_http_server.py) plugs
+into clients that support HTTP/SSE servers via its `http://127.0.0.1:8000/mcp`
+URL instead of a `command`/`args` pair.)

@@ -19,8 +19,29 @@ learns:
 | File | What it is |
 | --- | --- |
 | `kestrel_support_dataset.jsonl` | 118 chat-format training examples, every assistant reply in the fixed Kestrel five-part format. |
-| `kestrel_finetune_unsloth.ipynb` | The Colab notebook: install → load base model → LoRA → data → train → before/after → the "voice not facts" beat → export. |
+| `kestrel_finetune_unsloth.ipynb` | The annotated Colab notebook: install → load base → LoRA → data → train → before/after → the "voice not facts" beat → export → a DPO section. |
+| `kestrel_preference_dataset.jsonl` | 24 DPO preference pairs (`chosen` vs `rejected`) for the preference-tuning step beyond SFT. |
+| `build_dataset.py` | Shows how to *generate* format-consistent data synthetically (stdlib only). |
+| `check_format.py` | Evaluation: scores how many replies follow the five-part format (the curated set is 100%). |
+| `unsloth-everywhere.md` | The finale: how Unsloth spans MCP + Skills + Fine-tune (Studio, the Unsloth MCP server, serving your model to Claude Code). |
 | `README.md` | This file. |
+
+> ### ⚠️ Which notebook should you actually train with?
+> `kestrel_finetune_unsloth.ipynb` is written to **Unsloth's documented API** (the
+> exact `FastLanguageModel` / `get_peft_model` / `SFTTrainer` calls and QLoRA
+> hyperparameters from [unsloth.ai/docs](https://unsloth.ai/docs/get-started/fine-tuning-llms-guide)),
+> and it's the **annotated teaching version** — but it has **not been run on a
+> GPU here**, so treat it as API-correct, not battle-tested. **For a live session,
+> the reliable path is Unsloth's own official, tested notebook:**
+> 1. Open Unsloth's official **Llama-3.2 (1B) Conversational** notebook from
+>    [unsloth.ai/docs/get-started/unsloth-notebooks](https://unsloth.ai/docs/get-started/unsloth-notebooks).
+> 2. In its data cell, replace the sample dataset with **our** file:
+>    `load_dataset("json", data_files="kestrel_support_dataset.jsonl", split="train")`
+>    (upload `kestrel_support_dataset.jsonl` to the Colab session first).
+> 3. Run all — same result, on a notebook Unsloth keeps current and tested.
+>
+> Use our notebook to *read and teach* the pipeline; use the official one to *run
+> it in front of the room*.
 
 ## Two ways to run it
 

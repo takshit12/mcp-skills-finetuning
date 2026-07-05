@@ -181,6 +181,11 @@ python mcp/langgraph_mcp_client.py    # spawns the stdio server automatically
 > fully offline. Set `OPENROUTER_API_KEY` and it builds a Kestrel ReAct agent that actually
 > answers a warranty + restocking question end-to-end by calling those tools.
 
+**Use it in your editor too.** Because MCP is a standard, the same server registers in
+**Cursor, VS Code, Codex, Windsurf** and more — [`mcp/README.md`](./mcp/README.md#use-the-kestrel-server-in-any-mcp-client)
+has copy-paste configs (and example files `mcp/cursor_mcp.example.json`,
+`mcp/vscode_mcp.example.json`, `mcp/codex_config.example.toml`) for each.
+
 ### 2. Skills — package reusable know-how
 
 An **Agent Skill** is a folder the model loads on demand. Drop
@@ -219,6 +224,14 @@ in **Google Colab** (set **Runtime → Change runtime type → T4 GPU**), upload
 about **~10 minutes** on a free T4. Prefer no-code? Use **Unsloth Studio** (`unsloth studio`),
 upload the dataset, click **Train**, and compare in **Model Arena**. Details in
 [`finetune/README.md`](./finetune/README.md).
+
+> **Note on the notebook:** ours is written to Unsloth's *documented* API and is the
+> annotated teaching version — it hasn't been GPU-run here. For a live session, the reliable
+> path is Unsloth's **official** Llama-3.2 notebook with our dataset dropped in; the exact
+> 2-line swap is in [`finetune/README.md`](./finetune/README.md). And for the finale — how
+> **Unsloth spans MCP + Skills + Fine-tune all at once** (Studio, the Unsloth MCP server, and
+> serving your model back to Claude Code) — see
+> [`finetune/unsloth-everywhere.md`](./finetune/unsloth-everywhere.md).
 
 Swap the base model with a one-line change in `FastLanguageModel.from_pretrained(...)`:
 `unsloth/Llama-3.2-1B-Instruct` (default) → `unsloth/gemma-4-E4B-it` (a step up) or
